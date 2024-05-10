@@ -1,6 +1,13 @@
+# Everything the developer needs in addition to the production requirements
+-r requirements.txt
+
+
+# Testing
 pytest
 pytest-django
 pytest-mock
 pytest-cov
 codecov
+
+# Lint and code style
 flake8

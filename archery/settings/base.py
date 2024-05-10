@@ -1,13 +1,13 @@
 # -*- coding: UTF-8 -*-
 
-
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+import re
 from typing import List
 from datetime import timedelta
-import environ
 import requests
 import logging
+from ..const import CONFIG
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -16,71 +16,50 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
-env = environ.Env(
-    DEBUG=(bool, False),
-    ALLOWED_HOSTS=(list, ["*"]),
-    SECRET_KEY=(str, "hfusaf2m4ot#7)fkw#di2bu6(cv0@opwmafx5n#6=3d%x^hpl6"),
-    DATABASE_URL=(str, "mysql://root:@127.0.0.1:3306/archery"),
-    CACHE_URL=(str, "redis://127.0.0.1:6379/0"),
-    # 系统外部认证目前支持LDAP、OIDC、DINGDING三种，认证方式只能启用其中一种，如果启用多个，实际生效的只有一个，优先级LDAP > DINGDING > OIDC
-    ENABLE_LDAP=(bool, False),
-    ENABLE_OIDC=(bool, False),
-    ENABLE_DINGDING=(
-        bool,
-        False,
-    ),  # 钉钉认证方式参考文档：https://open.dingtalk.com/document/orgapp/tutorial-obtaining-user-personal-information
-    AUTH_LDAP_ALWAYS_UPDATE_USER=(bool, True),
-    AUTH_LDAP_USER_ATTR_MAP=(
-        dict,
-        {"username": "cn", "display": "displayname", "email": "mail"},
-    ),
-    Q_CLUISTER_SYNC=(bool, False),  # qcluster 同步模式, debug 时可以调整为 True
-    # CSRF_TRUSTED_ORIGINS=subdomain.example.com,subdomain.example2.com subdomain.example.com
-    CSRF_TRUSTED_ORIGINS=(list, []),
-    ENABLED_ENGINES=(
-        list,
-        [
-            "mysql",
-            "clickhouse",
-            "goinception",
-            "mssql",
-            "redis",
-            "pgsql",
-            "oracle",
-            "mongo",
-            "phoenix",
-            "odps",
-            "cassandra",
-            "doris",
-        ],
-    ),
-    ENABLED_NOTIFIERS=(
-        list,
-        [
-            "sql.notify:DingdingWebhookNotifier",
-            "sql.notify:DingdingPersonNotifier",
-            "sql.notify:FeishuWebhookNotifier",
-            "sql.notify:FeishuPersonNotifier",
-            "sql.notify:QywxWebhookNotifier",
-            "sql.notify:QywxToUserNotifier",
-            "sql.notify:MailNotifier",
-            "sql.notify:GenericWebhookNotifier",
-        ],
-    ),
-    CURRENT_AUDITOR=(str, "sql.utils.workflow_audit:AuditV2"),
-)
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = CONFIG.DEBUG
+
+# LOG LEVEL
+LOG_LEVEL = CONFIG.LOG_LEVEL
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env("SECRET_KEY")
+SECRET_KEY = CONFIG.SECRET_KEY
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env("DEBUG")
+DOMAINS = CONFIG.DOMAINS or 'localhost'
 
-ALLOWED_HOSTS = env("ALLOWED_HOSTS")
+ALLOWED_HOSTS = ["*"]
+ALLOWED_DOMAINS = DOMAINS.split(',') if DOMAINS else ['localhost:8080']
+ALLOWED_DOMAINS = [host.strip() for host in ALLOWED_DOMAINS]
+ALLOWED_DOMAINS = [host.replace('http://', '').replace('https://', '') for host in ALLOWED_DOMAINS if host]
+ALLOWED_DOMAINS = [host.split('/')[0] for host in ALLOWED_DOMAINS if host]
+ALLOWED_DOMAINS = [re.sub(':80$|:443$', '', host) for host in ALLOWED_DOMAINS]
+
+DEBUG_HOSTS = ('127.0.0.1', 'localhost')
+DEBUG_PORT = ['9123', ]
+if DEBUG:
+    DEBUG_PORT.extend(['4200', '9528'])
+DEBUG_HOST_PORTS = ['{}:{}'.format(host, port) for host in DEBUG_HOSTS for port in DEBUG_PORT]
+ALLOWED_DOMAINS.extend(DEBUG_HOST_PORTS)
+
+print("ALLOWED_HOSTS: ", )
+for host in ALLOWED_DOMAINS:
+    print('  - ' + host.lstrip('.'))
 
 # https://docs.djangoproject.com/en/4.0/ref/settings/#csrf-trusted-origins
-CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
+# CSRF_TRUSTED_ORIGINS=subdomain.example.com,subdomain.example2.com subdomain.example.com
+CSRF_TRUSTED_ORIGINS = []
+for host_port in ALLOWED_DOMAINS:
+    origin = host_port.strip('.')
+    if origin.startswith('http'):
+        CSRF_TRUSTED_ORIGINS.append(origin)
+        continue
+    is_local_origin = origin.split(':')[0] in DEBUG_HOSTS
+    for schema in ['https', 'http']:
+        if is_local_origin and schema == 'https':
+            continue
+        CSRF_TRUSTED_ORIGINS.append('{}://*.{}'.format(schema, origin))
+
+CORS_ALLOWED_ORIGINS = [o.replace('*.', '') for o in CSRF_TRUSTED_ORIGINS]
 
 # 解决nginx部署跳转404
 USE_X_FORWARDED_HOST = True
@@ -103,11 +82,33 @@ AVAILABLE_ENGINES = {
     "doris": {"path": "sql.engines.doris:DorisEngine"},
 }
 
-ENABLED_NOTIFIERS = env("ENABLED_NOTIFIERS")
+ENABLED_NOTIFIERS = [
+    "sql.notify:DingdingWebhookNotifier",
+    "sql.notify:DingdingPersonNotifier",
+    "sql.notify:FeishuWebhookNotifier",
+    "sql.notify:FeishuPersonNotifier",
+    "sql.notify:QywxWebhookNotifier",
+    "sql.notify:QywxToUserNotifier",
+    "sql.notify:MailNotifier",
+    "sql.notify:GenericWebhookNotifier",
+]
 
-ENABLED_ENGINES = env("ENABLED_ENGINES")
+ENABLED_ENGINES = [
+    "mysql",
+    "clickhouse",
+    "goinception",
+    "mssql",
+    "redis",
+    "pgsql",
+    "oracle",
+    "mongo",
+    "phoenix",
+    "odps",
+    "cassandra",
+    "doris",
+]
 
-CURRENT_AUDITOR = env("CURRENT_AUDITOR")
+CURRENT_AUDITOR = "sql.utils.workflow_audit:AuditV2"
 
 # Application definition
 INSTALLED_APPS = (
@@ -204,51 +205,58 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-############### 以下部分需要用户根据自己环境自行修改 ###################
+SESSION_COOKIE_AGE = CONFIG.SESSION_COOKIE_AGE
+SESSION_SAVE_EVERY_REQUEST = CONFIG.SESSION_SAVE_EVERY_REQUEST
+SESSION_EXPIRE_AT_BROWSER_CLOSE = CONFIG.SESSION_EXPIRE_AT_BROWSER_CLOSE
 
-# SESSION 设置
-SESSION_COOKIE_AGE = 60 * 300  # 300分钟
-SESSION_SAVE_EVERY_REQUEST = True
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # 关闭浏览器，则COOKIE失效
 
 # 该项目本身的mysql数据库地址
 DATABASES = {
     "default": {
-        **env.db(),
-        **{
-            "DEFAULT_CHARSET": "utf8mb4",
-            "CONN_MAX_AGE": 50,
-            "OPTIONS": {
-                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-                "charset": "utf8mb4",
-            },
-            "TEST": {
-                "NAME": "test_archery",
-                "CHARSET": "utf8mb4",
-            },
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': CONFIG.DB_NAME,
+        'HOST': CONFIG.DB_HOST,
+        'PORT': CONFIG.DB_PORT,
+        'USER': CONFIG.DB_USER,
+        'PASSWORD': CONFIG.DB_PASSWORD,
+        'ATOMIC_REQUESTS': True,
+        "DEFAULT_CHARSET": "utf8mb4",
+        "CONN_MAX_AGE": 50,
+        "OPTIONS": {
+            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            "charset": "utf8mb4",
         },
+        "TEST": {
+            "NAME": "test_archery",
+            "CHARSET": "utf8mb4",
+        },
+    }
+}
+
+# 缓存配置
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://{CONFIG.REDIS_HOST}:{CONFIG.REDIS_PORT}/0"
     }
 }
 
 # Django-Q
 Q_CLUSTER = {
     "name": "archery",
-    "workers": env("Q_CLUISTER_WORKERS", default=4),
+    "workers": CONFIG.Q_CLUSTER_WORKERS,
     "recycle": 500,
-    "timeout": env("Q_CLUISTER_TIMEOUT", default=60),
+    "timeout": CONFIG.Q_CLUSTER_TIMEOUT,
     "compress": True,
     "cpu_affinity": 1,
     "save_limit": 0,
     "queue_limit": 50,
     "label": "Django Q",
     "django_redis": "default",
-    "sync": env("Q_CLUISTER_SYNC"),  # 本地调试可以修改为True，使用同步模式
+    "sync": CONFIG.Q_CLUISTER_SYNC,
 }
 
-# 缓存配置
-CACHES = {
-    "default": env.cache(),
-}
+
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#std-setting-DEFAULT_AUTO_FIELD
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
@@ -294,7 +302,7 @@ SIMPLE_JWT = {
 }
 
 # OIDC
-ENABLE_OIDC = env("ENABLE_OIDC", False)
+ENABLE_OIDC = CONFIG.ENABLE_OIDC
 if ENABLE_OIDC:
     INSTALLED_APPS += ("mozilla_django_oidc",)
     AUTHENTICATION_BACKENDS = (
@@ -302,11 +310,10 @@ if ENABLE_OIDC:
         "django.contrib.auth.backends.ModelBackend",
     )
 
-    OIDC_RP_WELLKNOWN_URL = env(
-        "OIDC_RP_WELLKNOWN_URL"
-    )  # 例如 https://keycloak.example.com/realms/<your realm>/.well-known/openid-configuration
-    OIDC_RP_CLIENT_ID = env("OIDC_RP_CLIENT_ID")
-    OIDC_RP_CLIENT_SECRET = env("OIDC_RP_CLIENT_SECRET")
+    # 例如 https://keycloak.example.com/realms/<your realm>/.well-known/openid-configuration
+    OIDC_RP_WELLKNOWN_URL = CONFIG.OIDC_RP_WELLKNOWN_URL
+    OIDC_RP_CLIENT_ID = CONFIG.OIDC_RP_CLIENT_ID
+    OIDC_RP_CLIENT_SECRET = CONFIG.OIDC_RP_CLIENT_SECRET
 
     response = requests.get(OIDC_RP_WELLKNOWN_URL)
     response.raise_for_status()
@@ -317,27 +324,25 @@ if ENABLE_OIDC:
     OIDC_OP_JWKS_ENDPOINT = config["jwks_uri"]
     OIDC_OP_LOGOUT_ENDPOINT = config["end_session_endpoint"]
 
-    OIDC_RP_SCOPES = env("OIDC_RP_SCOPES", default="openid profile email")
-    OIDC_RP_SIGN_ALGO = env("OIDC_RP_SIGN_ALGO", default="RS256")
+    OIDC_RP_SCOPES = CONFIG.OIDC_RP_SCOPES
+    OIDC_RP_SIGN_ALGO = CONFIG.OIDC_RP_SIGN_ALGO
 
     LOGIN_REDIRECT_URL = "/"
 
 # Dingding
-ENABLE_DINGDING = env("ENABLE_DINGDING", False)
+ENABLE_DINGDING = CONFIG.ENABLE_DINGDING
 if ENABLE_DINGDING:
     INSTALLED_APPS += ("django_auth_dingding",)
     AUTHENTICATION_BACKENDS = (
         "common.authenticate.dingding_auth.DingdingAuthenticationBackend",
         "django.contrib.auth.backends.ModelBackend",
     )
-    AUTH_DINGDING_AUTHENTICATION_CALLBACK_URL = env(
-        "AUTH_DINGDING_AUTHENTICATION_CALLBACK_URL"
-    )
-    AUTH_DINGDING_APP_KEY = env("AUTH_DINGDING_APP_KEY")
-    AUTH_DINGDING_APP_SECRET = env("AUTH_DINGDING_APP_SECRET")
+    AUTH_DINGDING_AUTHENTICATION_CALLBACK_URL = CONFIG.AUTH_DINGDING_AUTHENTICATION_CALLBACK_URL
+    AUTH_DINGDING_APP_KEY = CONFIG.AUTH_DINGDING_APP_KEY
+    AUTH_DINGDING_APP_SECRET = CONFIG.AUTH_DINGDING_APP_SECRET
 
 # LDAP
-ENABLE_LDAP = env("ENABLE_LDAP", False)
+ENABLE_LDAP = CONFIG.ENABLE_LDAP
 if ENABLE_LDAP:
     import ldap
     from django_auth_ldap.config import LDAPSearch
@@ -347,30 +352,22 @@ if ENABLE_LDAP:
         "django.contrib.auth.backends.ModelBackend",  # django系统中手动创建的用户也可使用，优先级靠后。注意这2行的顺序
     )
 
-    AUTH_LDAP_SERVER_URI = env("AUTH_LDAP_SERVER_URI", default="ldap://xxx")
-    AUTH_LDAP_USER_DN_TEMPLATE = env("AUTH_LDAP_USER_DN_TEMPLATE", default=None)
+    AUTH_LDAP_SERVER_URI = CONFIG.AUTH_LDAP_SERVER_URI
+    AUTH_LDAP_USER_DN_TEMPLATE = CONFIG.AUTH_LDAP_USER_DN_TEMPLATE
     if not AUTH_LDAP_USER_DN_TEMPLATE:
         del AUTH_LDAP_USER_DN_TEMPLATE
-        AUTH_LDAP_BIND_DN = env(
-            "AUTH_LDAP_BIND_DN", default="cn=xxx,ou=xxx,dc=xxx,dc=xxx"
-        )
-        AUTH_LDAP_BIND_PASSWORD = env("AUTH_LDAP_BIND_PASSWORD", default="***********")
-        AUTH_LDAP_USER_SEARCH_BASE = env(
-            "AUTH_LDAP_USER_SEARCH_BASE", default="ou=xxx,dc=xxx,dc=xxx"
-        )
-        AUTH_LDAP_USER_SEARCH_FILTER = env(
-            "AUTH_LDAP_USER_SEARCH_FILTER", default="(cn=%(user)s)"
-        )
+        AUTH_LDAP_BIND_DN = CONFIG.AUTH_LDAP_BIND_DN
+        AUTH_LDAP_BIND_PASSWORD = CONFIG.AUTH_LDAP_BIND_PASSWORD
+        AUTH_LDAP_USER_SEARCH_BASE = CONFIG.AUTH_LDAP_USER_SEARCH_BASE
+        AUTH_LDAP_USER_SEARCH_FILTER = CONFIG.AUTH_LDAP_USER_SEARCH_FILTER
         AUTH_LDAP_USER_SEARCH = LDAPSearch(
             AUTH_LDAP_USER_SEARCH_BASE, ldap.SCOPE_SUBTREE, AUTH_LDAP_USER_SEARCH_FILTER
         )
-    AUTH_LDAP_ALWAYS_UPDATE_USER = env(
-        "AUTH_LDAP_ALWAYS_UPDATE_USER", default=True
-    )  # 每次登录从ldap同步用户信息
-    AUTH_LDAP_USER_ATTR_MAP = env("AUTH_LDAP_USER_ATTR_MAP")
+    AUTH_LDAP_ALWAYS_UPDATE_USER = CONFIG.AUTH_LDAP_ALWAYS_UPDATE_USER # 每次登录从ldap同步用户信息
+    AUTH_LDAP_USER_ATTR_MAP = {"username": "cn", "display": "displayname", "email": "mail"}
 
 # CAS认证
-ENABLE_CAS = env("ENABLE_CAS", default=False)
+ENABLE_CAS = CONFIG.ENABLE_CAS
 if ENABLE_CAS:
     INSTALLED_APPS += ("django_cas_ng",)
     MIDDLEWARE += ("django_cas_ng.middleware.CASMiddleware",)
@@ -380,19 +377,19 @@ if ENABLE_CAS:
     )
 
     # CAS 的地址
-    CAS_SERVER_URL = env("CAS_SERVER_URL")
+    CAS_SERVER_URL = CONFIG.CAS_SERVER_URL
     # CAS 版本
-    CAS_VERSION = env("CAS_VERSION")
+    CAS_VERSION = CONFIG.CAS_VERSION
     # 存入所有 CAS 服务端返回的 User 数据。
     CAS_APPLY_ATTRIBUTES_TO_USER = True
     # 关闭浏览器退出登录
     SESSION_EXPIRE_AT_BROWSER_CLOSE = True
     #  忽略  SSL  证书校验
-    CAS_VERIFY_SSL_CERTIFICATE = env("CAS_VERIFY_SSL_CERTIFICATE", default=False)
+    CAS_VERIFY_SSL_CERTIFICATE = CONFIG.CAS_VERIFY_SSL_CERTIFICATE
     #  忽略来源验证
     CAS_IGNORE_REFERER = True
     # https请求问题
-    CAS_FORCE_SSL_SERVICE_URL = env("CAS_FORCE_SSL_SERVICE_URL", default=False)
+    CAS_FORCE_SSL_SERVICE_URL = CONFIG.CAS_FORCE_SSL_SERVICE_URL
     CAS_RETRY_TIMEOUT = 1
     CAS_RETRY_LOGIN = True
     CAS_EXTRA_LOGIN_PARAMS = {"renew": True}
@@ -421,70 +418,7 @@ if ENABLE_AUTHENTICATION_COUNT > 0:
     logger.info("当前生效的外部认证方式：" + authentication)
     logger.info("认证后端：" + AUTHENTICATION_BACKENDS.__str__())
 
-# LOG配置
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "verbose": {
-            "format": "[%(asctime)s][%(threadName)s:%(thread)d][task_id:%(name)s][%(filename)s:%(lineno)d][%(levelname)s]- %(message)s"
-        },
-    },
-    "handlers": {
-        "default": {
-            "level": "DEBUG",
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": "logs/archery.log",
-            "maxBytes": 1024 * 1024 * 100,  # 5 MB
-            "backupCount": 5,
-            "formatter": "verbose",
-        },
-        "django-q": {
-            "level": "DEBUG",
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": "logs/qcluster.log",
-            "maxBytes": 1024 * 1024 * 100,  # 5 MB
-            "backupCount": 5,
-            "formatter": "verbose",
-        },
-        "console": {
-            "level": "DEBUG",
-            "class": "logging.StreamHandler",
-            "formatter": "verbose",
-        },
-    },
-    "loggers": {
-        "default": {  # default日志
-            "handlers": ["console", "default"],
-            "level": "WARNING",
-        },
-        "django-q": {  # django_q模块相关日志
-            "handlers": ["console", "django-q"],
-            "level": "WARNING",
-            "propagate": False,
-        },
-        "django_auth_ldap": {  # django_auth_ldap模块相关日志
-            "handlers": ["console", "default"],
-            "level": "WARNING",
-            "propagate": False,
-        },
-        "mozilla_django_oidc": {
-            "handlers": ["console", "default"],
-            "level": "WARNING",
-            "propagate": False,
-        },
-        # 'django.db': {  # 打印SQL语句，方便开发
-        #     'handlers': ['console', 'default'],
-        #     'level': 'DEBUG',
-        #     'propagate': False
-        # },
-        # 'django.request': {  # 打印请求错误堆栈信息，方便开发
-        #     'handlers': ['console', 'default'],
-        #     'level': 'DEBUG',
-        #     'propagate': False
-        # },
-    },
-}
+
 
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 if not os.path.exists(MEDIA_ROOT):
