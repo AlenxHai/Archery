@@ -8,11 +8,11 @@ import os
 
 from ..const import PROJECT_DIR, CONFIG
 
-LOG_DIR = os.path.join(PROJECT_DIR, 'data', 'logs')
-ARCHERY_LOG_FILE = os.path.join(LOG_DIR, 'archery.log')
-DRF_EXCEPTION_LOG_FILE = os.path.join(LOG_DIR, 'drf_exception.log')
-UNEXPECTED_EXCEPTION_LOG_FILE = os.path.join(LOG_DIR, 'unexpected_exception.log')
-GUNICORN_LOG_FILE = os.path.join(LOG_DIR, 'gunicorn.log')
+LOG_DIR = os.path.join(PROJECT_DIR, "data", "logs")
+ARCHERY_LOG_FILE = os.path.join(LOG_DIR, "archery.log")
+DRF_EXCEPTION_LOG_FILE = os.path.join(LOG_DIR, "drf_exception.log")
+UNEXPECTED_EXCEPTION_LOG_FILE = os.path.join(LOG_DIR, "unexpected_exception.log")
+GUNICORN_LOG_FILE = os.path.join(LOG_DIR, "gunicorn.log")
 LOG_LEVEL = CONFIG.LOG_LEVEL
 
 # LOG配置
@@ -81,9 +81,9 @@ LOGGING = {
 }
 
 if CONFIG.DEBUG_DEV:
-    LOGGING['loggers']['django.db'] = {
-       'handlers': ['console', 'file'],
-       'level': 'DEBUG'
+    LOGGING["loggers"]["django.db"] = {
+        "handlers": ["console", "file"],
+        "level": "DEBUG",
     }
 
 if not os.path.isdir(LOG_DIR):

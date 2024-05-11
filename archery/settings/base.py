@@ -24,41 +24,51 @@ LOG_LEVEL = CONFIG.LOG_LEVEL
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = CONFIG.SECRET_KEY
 
-DOMAINS = CONFIG.DOMAINS or 'localhost'
+DOMAINS = CONFIG.DOMAINS or "localhost"
 
 ALLOWED_HOSTS = ["*"]
-ALLOWED_DOMAINS = DOMAINS.split(',') if DOMAINS else ['localhost:8080']
+ALLOWED_DOMAINS = DOMAINS.split(",") if DOMAINS else ["localhost:8080"]
 ALLOWED_DOMAINS = [host.strip() for host in ALLOWED_DOMAINS]
-ALLOWED_DOMAINS = [host.replace('http://', '').replace('https://', '') for host in ALLOWED_DOMAINS if host]
-ALLOWED_DOMAINS = [host.split('/')[0] for host in ALLOWED_DOMAINS if host]
-ALLOWED_DOMAINS = [re.sub(':80$|:443$', '', host) for host in ALLOWED_DOMAINS]
+ALLOWED_DOMAINS = [
+    host.replace("http://", "").replace("https://", "")
+    for host in ALLOWED_DOMAINS
+    if host
+]
+ALLOWED_DOMAINS = [host.split("/")[0] for host in ALLOWED_DOMAINS if host]
+ALLOWED_DOMAINS = [re.sub(":80$|:443$", "", host) for host in ALLOWED_DOMAINS]
 
-DEBUG_HOSTS = ('127.0.0.1', 'localhost')
-DEBUG_PORT = ['9123', ]
+DEBUG_HOSTS = ("127.0.0.1", "localhost")
+DEBUG_PORT = [
+    "9123",
+]
 if DEBUG:
-    DEBUG_PORT.extend(['4200', '9528'])
-DEBUG_HOST_PORTS = ['{}:{}'.format(host, port) for host in DEBUG_HOSTS for port in DEBUG_PORT]
+    DEBUG_PORT.extend(["4200", "9528"])
+DEBUG_HOST_PORTS = [
+    "{}:{}".format(host, port) for host in DEBUG_HOSTS for port in DEBUG_PORT
+]
 ALLOWED_DOMAINS.extend(DEBUG_HOST_PORTS)
 
-print("ALLOWED_HOSTS: ", )
+print(
+    "ALLOWED_HOSTS: ",
+)
 for host in ALLOWED_DOMAINS:
-    print('  - ' + host.lstrip('.'))
+    print("  - " + host.lstrip("."))
 
 # https://docs.djangoproject.com/en/4.0/ref/settings/#csrf-trusted-origins
 # CSRF_TRUSTED_ORIGINS=subdomain.example.com,subdomain.example2.com subdomain.example.com
 CSRF_TRUSTED_ORIGINS = []
 for host_port in ALLOWED_DOMAINS:
-    origin = host_port.strip('.')
-    if origin.startswith('http'):
+    origin = host_port.strip(".")
+    if origin.startswith("http"):
         CSRF_TRUSTED_ORIGINS.append(origin)
         continue
-    is_local_origin = origin.split(':')[0] in DEBUG_HOSTS
-    for schema in ['https', 'http']:
-        if is_local_origin and schema == 'https':
+    is_local_origin = origin.split(":")[0] in DEBUG_HOSTS
+    for schema in ["https", "http"]:
+        if is_local_origin and schema == "https":
             continue
-        CSRF_TRUSTED_ORIGINS.append('{}://*.{}'.format(schema, origin))
+        CSRF_TRUSTED_ORIGINS.append("{}://*.{}".format(schema, origin))
 
-CORS_ALLOWED_ORIGINS = [o.replace('*.', '') for o in CSRF_TRUSTED_ORIGINS]
+CORS_ALLOWED_ORIGINS = [o.replace("*.", "") for o in CSRF_TRUSTED_ORIGINS]
 
 # 解决nginx部署跳转404
 USE_X_FORWARDED_HOST = True
@@ -211,13 +221,13 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = CONFIG.SESSION_EXPIRE_AT_BROWSER_CLOSE
 # 该项目本身的mysql数据库地址
 DATABASES = {
     "default": {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': CONFIG.DB_NAME,
-        'HOST': CONFIG.DB_HOST,
-        'PORT': CONFIG.DB_PORT,
-        'USER': CONFIG.DB_USER,
-        'PASSWORD': CONFIG.DB_PASSWORD,
-        'ATOMIC_REQUESTS': True,
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": CONFIG.DB_NAME,
+        "HOST": CONFIG.DB_HOST,
+        "PORT": CONFIG.DB_PORT,
+        "USER": CONFIG.DB_USER,
+        "PASSWORD": CONFIG.DB_PASSWORD,
+        "ATOMIC_REQUESTS": True,
         "DEFAULT_CHARSET": "utf8mb4",
         "CONN_MAX_AGE": 50,
         "OPTIONS": {
@@ -235,7 +245,7 @@ DATABASES = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{CONFIG.REDIS_HOST}:{CONFIG.REDIS_PORT}/0"
+        "LOCATION": f"redis://{CONFIG.REDIS_HOST}:{CONFIG.REDIS_PORT}/0",
     }
 }
 
@@ -333,7 +343,9 @@ if ENABLE_DINGDING:
         "common.authenticate.dingding_auth.DingdingAuthenticationBackend",
         "django.contrib.auth.backends.ModelBackend",
     )
-    AUTH_DINGDING_AUTHENTICATION_CALLBACK_URL = CONFIG.AUTH_DINGDING_AUTHENTICATION_CALLBACK_URL
+    AUTH_DINGDING_AUTHENTICATION_CALLBACK_URL = (
+        CONFIG.AUTH_DINGDING_AUTHENTICATION_CALLBACK_URL
+    )
     AUTH_DINGDING_APP_KEY = CONFIG.AUTH_DINGDING_APP_KEY
     AUTH_DINGDING_APP_SECRET = CONFIG.AUTH_DINGDING_APP_SECRET
 
@@ -359,8 +371,14 @@ if ENABLE_LDAP:
         AUTH_LDAP_USER_SEARCH = LDAPSearch(
             AUTH_LDAP_USER_SEARCH_BASE, ldap.SCOPE_SUBTREE, AUTH_LDAP_USER_SEARCH_FILTER
         )
-    AUTH_LDAP_ALWAYS_UPDATE_USER = CONFIG.AUTH_LDAP_ALWAYS_UPDATE_USER  # 每次登录从ldap同步用户信息
-    AUTH_LDAP_USER_ATTR_MAP = {"username": "cn", "display": "displayname", "email": "mail"}
+    AUTH_LDAP_ALWAYS_UPDATE_USER = (
+        CONFIG.AUTH_LDAP_ALWAYS_UPDATE_USER
+    )  # 每次登录从ldap同步用户信息
+    AUTH_LDAP_USER_ATTR_MAP = {
+        "username": "cn",
+        "display": "displayname",
+        "email": "mail",
+    }
 
 # CAS认证
 ENABLE_CAS = CONFIG.ENABLE_CAS
