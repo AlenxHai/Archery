@@ -208,7 +208,6 @@ SESSION_COOKIE_AGE = CONFIG.SESSION_COOKIE_AGE
 SESSION_SAVE_EVERY_REQUEST = CONFIG.SESSION_SAVE_EVERY_REQUEST
 SESSION_EXPIRE_AT_BROWSER_CLOSE = CONFIG.SESSION_EXPIRE_AT_BROWSER_CLOSE
 
-
 # 该项目本身的mysql数据库地址
 DATABASES = {
     "default": {
@@ -254,8 +253,6 @@ Q_CLUSTER = {
     "django_redis": "default",
     "sync": CONFIG.Q_CLUISTER_SYNC,
 }
-
-
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#std-setting-DEFAULT_AUTO_FIELD
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
@@ -362,7 +359,7 @@ if ENABLE_LDAP:
         AUTH_LDAP_USER_SEARCH = LDAPSearch(
             AUTH_LDAP_USER_SEARCH_BASE, ldap.SCOPE_SUBTREE, AUTH_LDAP_USER_SEARCH_FILTER
         )
-    AUTH_LDAP_ALWAYS_UPDATE_USER = CONFIG.AUTH_LDAP_ALWAYS_UPDATE_USER # 每次登录从ldap同步用户信息
+    AUTH_LDAP_ALWAYS_UPDATE_USER = CONFIG.AUTH_LDAP_ALWAYS_UPDATE_USER  # 每次登录从ldap同步用户信息
     AUTH_LDAP_USER_ATTR_MAP = {"username": "cn", "display": "displayname", "email": "mail"}
 
 # CAS认证
@@ -416,7 +413,6 @@ if ENABLE_AUTHENTICATION_COUNT > 0:
             break
     logger.info("当前生效的外部认证方式：" + authentication)
     logger.info("认证后端：" + AUTHENTICATION_BACKENDS.__str__())
-
 
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 if not os.path.exists(MEDIA_ROOT):
