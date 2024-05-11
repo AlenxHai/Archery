@@ -29,12 +29,12 @@ from django.utils.translation import gettext_lazy as _
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_DIR = os.path.dirname(BASE_DIR)
 
-logger = logging.getLogger('archery.conf')
+logger = logging.getLogger("archery.conf")
 
 
 def import_string(dotted_path):
     try:
-        module_path, class_name = dotted_path.rsplit('.', 1)
+        module_path, class_name = dotted_path.rsplit(".", 1)
     except ValueError as err:
         raise ImportError("%s doesn't look like a module path" % dotted_path) from err
 
@@ -44,16 +44,17 @@ def import_string(dotted_path):
         return getattr(module, class_name)
     except AttributeError as err:
         raise ImportError(
-            'Module "%s" does not define a "%s" attribute/class' %
-            (module_path, class_name)) from err
+            'Module "%s" does not define a "%s" attribute/class'
+            % (module_path, class_name)
+        ) from err
 
 
 def is_absolute_uri(uri):
-    """ 判断一个uri是否是绝对地址 """
+    """判断一个uri是否是绝对地址"""
     if not isinstance(uri, str):
         return False
 
-    result = re.match(r'^http[s]?://.*', uri)
+    result = re.match(r"^http[s]?://.*", uri)
     if result is None:
         return False
 
@@ -61,7 +62,7 @@ def is_absolute_uri(uri):
 
 
 def build_absolute_uri(base, uri):
-    """ 构建绝对uri地址 """
+    """构建绝对uri地址"""
     if uri is None:
         return base
 
@@ -76,7 +77,7 @@ def build_absolute_uri(base, uri):
 
     parsed_base = urlparse(base)
     url = "{}://{}".format(parsed_base.scheme, parsed_base.netloc)
-    path = '{}/{}/'.format(parsed_base.path.strip('/'), uri.strip('/'))
+    path = "{}/{}/".format(parsed_base.path.strip("/"), uri.strip("/"))
     return urljoin(url, path)
 
 
@@ -86,7 +87,9 @@ class DoesNotExist(Exception):
 
 class ConfigCrypto:
     secret_keys = [
-        'SECRET_KEY', 'DB_PASSWORD', 'REDIS_PASSWORD',
+        "SECRET_KEY",
+        "DB_PASSWORD",
+        "REDIS_PASSWORD",
     ]
 
     def __init__(self, key):
@@ -98,16 +101,16 @@ class ConfigCrypto:
         if len(key) >= 16:
             key = key[:16]
         else:
-            key += b'\0' * (16 - len(key))
+            key += b"\0" * (16 - len(key))
         return key
 
     def encrypt(self, data):
-        data = bytes(data, encoding='utf8')
-        return base64.b64encode(data).decode('utf8')
+        data = bytes(data, encoding="utf8")
+        return base64.b64encode(data).decode("utf8")
 
     def decrypt(self, data):
-        data = base64.urlsafe_b64decode(bytes(data, encoding='utf8'))
-        return data.decode('utf8')
+        data = base64.urlsafe_b64decode(bytes(data, encoding="utf8"))
+        return data.decode("utf8")
 
     def decrypt_if_need(self, value, item):
         if item not in self.secret_keys:
@@ -125,82 +128,73 @@ class ConfigCrypto:
     def get_secret_encryptor(cls):
         # 使用 SM4 加密配置文件敏感信息
         # https://the-x.cn/cryptography/Sm4.aspx
-        secret_encrypt_key = os.environ.get('SECRET_ENCRYPT_KEY', '')
+        secret_encrypt_key = os.environ.get("SECRET_ENCRYPT_KEY", "")
         if not secret_encrypt_key:
             return None
-        print('Info: try using SM4 to decrypt config secret value')
+        print("Info: try using SM4 to decrypt config secret value")
         return cls(secret_encrypt_key)
 
 
 class Config(dict):
     defaults = {
         # Django Config, Must set before start
-        'SECRET_KEY': '',
-        'DEBUG': False,
-        'DEBUG_DEV': False,
-        'LOG_LEVEL': 'DEBUG',
-        'LOG_DIR': os.path.join(PROJECT_DIR, 'data', 'logs'),
-        'DB_NAME': 'archery',
-        'DB_HOST': '127.0.0.1',
-        'DB_PORT': 3306,
-        'DB_USER': 'root',
-        'DB_PASSWORD': '',
-        'REDIS_HOST': '127.0.0.1',
-        'REDIS_PORT': 6379,
-        'REDIS_PASSWORD': '',
-
-        'SESSION_COOKIE_DOMAIN': None,
-        'CSRF_COOKIE_DOMAIN': None,
-        'SESSION_COOKIE_NAME_PREFIX': None,
-        'SESSION_COOKIE_AGE': 300 * 12,
-        'SESSION_EXPIRE_AT_BROWSER_CLOSE': True,
-        'LOGIN_URL': reverse_lazy('authentication:login'),
-
+        "SECRET_KEY": "",
+        "DEBUG": False,
+        "DEBUG_DEV": False,
+        "LOG_LEVEL": "DEBUG",
+        "LOG_DIR": os.path.join(PROJECT_DIR, "data", "logs"),
+        "DB_NAME": "archery",
+        "DB_HOST": "127.0.0.1",
+        "DB_PORT": 3306,
+        "DB_USER": "root",
+        "DB_PASSWORD": "",
+        "REDIS_HOST": "127.0.0.1",
+        "REDIS_PORT": 6379,
+        "REDIS_PASSWORD": "",
+        "SESSION_COOKIE_DOMAIN": None,
+        "CSRF_COOKIE_DOMAIN": None,
+        "SESSION_COOKIE_NAME_PREFIX": None,
+        "SESSION_COOKIE_AGE": 300 * 12,
+        "SESSION_EXPIRE_AT_BROWSER_CLOSE": True,
+        "LOGIN_URL": reverse_lazy("authentication:login"),
         # Vault
-        'VAULT_ENABLED': False,
-        'VAULT_HCP_HOST': '',
-        'VAULT_HCP_TOKEN': '',
-        'VAULT_HCP_MOUNT_POINT': 'archery',
-
+        "VAULT_ENABLED": False,
+        "VAULT_HCP_HOST": "",
+        "VAULT_HCP_TOKEN": "",
+        "VAULT_HCP_MOUNT_POINT": "archery",
         # 启动前
-        'HTTP_BIND_HOST': '0.0.0.0',
-        'HTTP_LISTEN_PORT': 9123,
-
+        "HTTP_BIND_HOST": "0.0.0.0",
+        "HTTP_LISTEN_PORT": 9123,
         # 钉钉
-        'AUTH_DINGTALK': False,
-        'DINGTALK_AGENTID': '',
-        'DINGTALK_APPKEY': '',
-        'DINGTALK_APPSECRET': '',
-
+        "AUTH_DINGTALK": False,
+        "DINGTALK_AGENTID": "",
+        "DINGTALK_APPKEY": "",
+        "DINGTALK_APPSECRET": "",
         # Cas 认证
-        'AUTH_CAS': False,
-        'CAS_SERVER_URL': "https://example.com/cas/",
-        'CAS_ROOT_PROXIED_AS': 'https://example.com',
-        'CAS_LOGOUT_COMPLETELY': True,
-        'CAS_VERSION': 3,
-        'CAS_USERNAME_ATTRIBUTE': 'cas:user',
-        'CAS_APPLY_ATTRIBUTES_TO_USER': False,
-        'CAS_RENAME_ATTRIBUTES': {'cas:user': 'username'},
-        'CAS_CREATE_USER': True,
-
-        'TIME_ZONE': 'Asia/Shanghai',
-        'FORCE_SCRIPT_NAME': '',
-        'SESSION_COOKIE_SECURE': False,
-        'DOMAINS': '',
-        'CSRF_COOKIE_SECURE': False,
-        'REFERER_CHECK_ENABLED': False,
-        'SESSION_ENGINE': 'cache',
-        'SESSION_SAVE_EVERY_REQUEST': True,
-        'SERVER_REPLAY_STORAGE': {},
-        'SECURITY_DATA_CRYPTO_ALGO': None,
-
+        "AUTH_CAS": False,
+        "CAS_SERVER_URL": "https://example.com/cas/",
+        "CAS_ROOT_PROXIED_AS": "https://example.com",
+        "CAS_LOGOUT_COMPLETELY": True,
+        "CAS_VERSION": 3,
+        "CAS_USERNAME_ATTRIBUTE": "cas:user",
+        "CAS_APPLY_ATTRIBUTES_TO_USER": False,
+        "CAS_RENAME_ATTRIBUTES": {"cas:user": "username"},
+        "CAS_CREATE_USER": True,
+        "TIME_ZONE": "Asia/Shanghai",
+        "FORCE_SCRIPT_NAME": "",
+        "SESSION_COOKIE_SECURE": False,
+        "DOMAINS": "",
+        "CSRF_COOKIE_SECURE": False,
+        "REFERER_CHECK_ENABLED": False,
+        "SESSION_ENGINE": "cache",
+        "SESSION_SAVE_EVERY_REQUEST": True,
+        "SERVER_REPLAY_STORAGE": {},
+        "SECURITY_DATA_CRYPTO_ALGO": None,
     }
 
     def __init__(self, *args):
         super().__init__(*args)
         self.secret_encryptor = ConfigCrypto.get_secret_encryptor()
-
-
 
     def convert_type(self, k, v):
         default_value = self.defaults.get(k)
@@ -230,7 +224,7 @@ class Config(dict):
         return v
 
     def __repr__(self):
-        return '<%s %s>' % (self.__class__.__name__, dict.__repr__(self))
+        return "<%s %s>" % (self.__class__.__name__, dict.__repr__(self))
 
     def get_from_config(self, item):
         try:
@@ -290,15 +284,15 @@ class ConfigManager:
         """
         if self.root_path:
             filename = os.path.join(self.root_path, filename)
-        d = types.ModuleType('config')
+        d = types.ModuleType("config")
         d.__file__ = filename
         try:
-            with open(filename, mode='rb') as config_file:
-                exec(compile(config_file.read(), filename, 'exec'), d.__dict__)
+            with open(filename, mode="rb") as config_file:
+                exec(compile(config_file.read(), filename, "exec"), d.__dict__)
         except IOError as e:
             if silent and e.errno in (errno.ENOENT, errno.EISDIR):
                 return False
-            e.strerror = 'Unable to load configuration file (%s)' % e.strerror
+            e.strerror = "Unable to load configuration file (%s)" % e.strerror
             raise
         self.from_object(d)
         return True
@@ -358,7 +352,7 @@ class ConfigManager:
         except IOError as e:
             if silent and e.errno in (errno.ENOENT, errno.EISDIR):
                 return False
-            e.strerror = 'Unable to load configuration file (%s)' % e.strerror
+            e.strerror = "Unable to load configuration file (%s)" % e.strerror
             raise
         return self.from_mapping(obj)
 
@@ -366,12 +360,12 @@ class ConfigManager:
         if self.root_path:
             filename = os.path.join(self.root_path, filename)
         try:
-            with open(filename, 'rt', encoding='utf8') as f:
+            with open(filename, "rt", encoding="utf8") as f:
                 obj = yaml.safe_load(f)
         except IOError as e:
             if silent and e.errno in (errno.ENOENT, errno.EISDIR):
                 return False
-            e.strerror = 'Unable to load configuration file (%s)' % e.strerror
+            e.strerror = "Unable to load configuration file (%s)" % e.strerror
             raise
         if obj:
             return self.from_mapping(obj)
@@ -385,17 +379,17 @@ class ConfigManager:
         """
         mappings = []
         if len(mapping) == 1:
-            if hasattr(mapping[0], 'items'):
+            if hasattr(mapping[0], "items"):
                 mappings.append(mapping[0].items())
             else:
                 mappings.append(mapping[0])
         elif len(mapping) > 1:
             raise TypeError(
-                'expected at most 1 positional argument, got %d' % len(mapping)
+                "expected at most 1 positional argument, got %d" % len(mapping)
             )
         mappings.append(kwargs.items())
         for mapping in mappings:
-            for (key, value) in mapping:
+            for key, value in mapping:
                 if key.isupper():
                     self.config[key] = value
         return True
@@ -413,7 +407,7 @@ class ConfigManager:
             return False
 
     def load_from_yml(self):
-        for i in ['config.yml', 'config.yaml']:
+        for i in ["config.yml", "config.yaml"]:
             if not os.path.isfile(os.path.join(self.root_path, i)):
                 continue
             loaded = self.from_yaml(i)
